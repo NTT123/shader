@@ -11,7 +11,7 @@
     "include": [
       "src/**/*"
     ],
-    "rootDir": "./",
+    "rootDir": "./shader",
     "moduleResolution": "node"
   }
 }
