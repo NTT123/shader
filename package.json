@@ -1,0 +1,23 @@
+{
+  "name": "parcel-sandbox",
+  "version": "1.0.0",
+  "description": "Simple Parcel Sandbox",
+  "main": "index.html",
+  "scripts": {
+    "start": "parcel index.html --open",
+    "build": "parcel node_modules/monaco-editor/esm/vs/editor/editor.worker.js --out-dir docs || parcel build index.html --out-dir docs"
+  },
+  "dependencies": {
+    "glslCanvas": "0.1.7",
+    "monaco-editor": "0.15.6",
+    "parcel": "^1.11.0"
+  },
+  "devDependencies": {
+    "cross-env": "^5.2.0",
+    "cssnano": "^4.1.8",
+    "gh-pages": "^1.2.0",
+    "monaco-editor": "0.15.6",
+    "parcel-bundler": "^1.6.1",
+    "typescript": "^3.2.2"
+  }
+}
