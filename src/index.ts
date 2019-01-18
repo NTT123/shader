@@ -30,6 +30,7 @@ if (co.length > 0) {
 
 
 const urlCode = window.atob(window.location.hash.substr(1));
+window.location.hash = '';
 
 if (urlCode.length > 0) {
   code = urlCode;
@@ -200,13 +201,13 @@ editor.addAction({
 
 editor.addAction({
   id: 'export url',
-  label: 'Get URL Source Code',
+  label: 'Get URL for this program',
   precondition: null,
   keybindingContext: null,
   contextMenuGroupId: 'navigation',
   contextMenuOrder: 1.5,
   run: function (ed) {
-    const code = document.URL.replace(/#.+/g, '') + "#" + window.btoa(editor.getValue());
+    const code = document.URL.replace(/#.*/g, '') + "#" + window.btoa(editor.getValue());
     window.prompt("Please copy the folowing URL", code);
     return null;
   }
