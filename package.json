@@ -5,7 +5,8 @@
   "main": "index.html",
   "scripts": {
     "start": "parcel index.html --open",
-    "build": "parcel node_modules/monaco-editor/esm/vs/editor/editor.worker.js --out-dir docs || parcel build index.html --out-dir docs"
+    "build": "parcel build node_modules/monaco-editor/esm/vs/editor/editor.worker.js --public-url ./ --out-dir docs && parcel build index.html --out-dir docs --public-url ./"
+
   },
   "dependencies": {
     "glslCanvas": "0.1.7",

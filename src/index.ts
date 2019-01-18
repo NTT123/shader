@@ -1,69 +1,82 @@
 // Import stylesheets
-// import './style.css';
+import './style.css';
 // import GitHub from 'github-api';
 
+// import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.main';
-//import 'monaco-editor';
+//import * as monaco from 'monaco-editor';
+
 
 (window as any).MonacoEnvironment = {
   getWorkerUrl: function(moduleId: string, label: string) {
-    if (label === 'json') {
-      return './json.worker.js';
-    }
-    if (label === 'css') {
-      return './css.worker.js';
-    }
-    if (label === 'html') {
-      return './html.worker.js';
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return './typescript.worker.js';
-    }
     return './editor.worker.js';
   }
 };
 
-// import * as monaco from 'monaco-editor';
 
-let code = `/**
- *  Press "Esc" to save, compile and run your program
- */
 
-#ifdef GL_ES
-precision mediump float;
-#endif
-// uniform vec2 u_mouse;   
-uniform vec2 u_resolution; 
-uniform float u_time;
+import { frag } from './example';
 
-vec4 render(vec4 coord) {
-  vec2 c = coord.xy / u_resolution * 2.0 - 1.0; // [-1, 1]^2
-  c.x *= u_resolution.x / u_resolution.y;
-
-  float d = length(c);
-  float g = smoothstep(0.51, 0.50, d + 0.1*sin(2.*u_time));
-  return vec4(1.0, 1.0, 0.0, 1.0) *g  + (1. - g) *vec4(1.0);
-}
-
-void main(){
-  gl_FragColor = render(gl_FragCoord);
-}
-`;
+let code = frag;
 
 import { setCookie, getCookie } from './cookie';
 
-const co: string = getCookie('code');
+const co: string = getCookie("code");
 if (co.length > 0) {
   code = co;
 } else {
-  setCookie('code', code, 365);
+  setCookie("code", code, 365);
 }
+
+
+const urlCode = window.atob(window.location.hash.substr(1));
+
+if (urlCode.length > 0) {
+  code = urlCode;
+}
+
+
+/*
+(window as any).MonacoEnvironment = {
+
+      getWorkerUrl: function(workerId, label) {
+      return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+        self.MonacoEnvironment = {
+          baseUrl: 'https://shader.stackblitz.io/node_modules/monaco-editor/esm'
+        };
+        importScripts('https://shader.stackblitz.io/node_modules/monaco-editor/esm/vs/editor/editor.worker.js');`
+      )}`;
+    }
+
+};
+*/
+
+/*
+        getWorkerUrl: function (moduleId: string, label: string) {
+            return 'https://shader.stackblitz.io/node_modules/monaco-editor/esm/vs/editor/editor.worker.js';
+        }
+    };
+*/
+
+import * as shaderLanguage from './cshader';
+monaco.languages.register({ id: 'cshader' });
+monaco.languages.setLanguageConfiguration('cshader', shaderLanguage.conf);
+monaco.languages.setMonarchTokensProvider('cshader', shaderLanguage.language);
+
+
 
 const editor = monaco.editor.create(document.getElementById('myeditor'), {
   value: code,
+  minimap: {
+    enabled: false
+  },
+  fontSize: "12px",
+  wordWrap: "on",
   automaticLayout: true,
-  language: 'cpp'
+  language: 'cshader'
 });
+
+
 
 /*
     "editor.worker": 'monaco-editor/esm/vs/editor/editor.worker.js',
@@ -71,39 +84,32 @@ const editor = monaco.editor.create(document.getElementById('myeditor'), {
     "css.worker": 'monaco-editor/esm/vs/language/css/css.worker',
     "html.worker": 'monaco-editor/esm/vs/language/html/html.worker',
     "ts.worker": 'monaco-editor/esm/vs/language/typescript/ts.worker',
-
-
-(window as any).MonacoEnvironment = {
-        getWorkerUrl: function (moduleId: string, label: string) {
-            if (label === 'json') {
-                return '../node_modules/monaco-editor/esm/vs/language/json/json.worker.js';
-            }
-            if (label === 'css') {
-                return '../node_modules/monaco-editor/esm/vs/language/css/css.worker.js';
-            }
-            if (label === 'html') {
-                return './html.worker.js';
-            }
-            if (label === 'typescript' || label === 'javascript') {
-                return '../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js';
-            }
-            return '../node_modules/monaco-editor/esm/vs/editor/editor.worker.js';
-        }
-    };
 */
+
+
 
 import * as glslCanvas from 'glslCanvas';
 
-const canvas = document.querySelector('#glCanvas') as HTMLCanvasElement;
+const canvas = document.querySelector("#glCanvas") as HTMLCanvasElement;
 const sandbox = new glslCanvas.default(canvas);
 
-sandbox.trigger = function(error: string, info) {
-  if (error === 'error') {
+
+let time = performance.now(); //number[] = [];
+let fps;
+
+sandbox.trigger = function (msg: string, info) {
+  if (msg === "render") {
+    const now = performance.now();
+    fps = 1000.0 / (now - time);
+    time = now;
+  }
+
+  if (msg === "error") {
     if (info.type === 35632) {
-      const errs: string[] = info.error.split('\n');
+      const errs: string[] = info.error.split("\n");
       errs.pop();
       console.log(info.error, errs);
-      const markets = errs.map(err => {
+      const markets = errs.map((err) => {
         const re = new RegExp('[^0-9]+ ([0-9]+):([0-9]+):');
         const rl = err.match(re);
 
@@ -116,31 +122,36 @@ sandbox.trigger = function(error: string, info) {
           endColumn: 1000,
           message: err,
           severity: monaco.MarkerSeverity.Error
-        };
+        }
       });
 
-      monaco.editor.setModelMarkers(editor.getModel(), 'shader', markets);
+      monaco.editor.setModelMarkers(editor.getModel(), 'shader', markets)
     }
   }
-};
+}
 
-const ctxKey = editor.createContextKey('condition', false);
-ctxKey.set(true);
+const ctxKey = editor.createContextKey('condition', false)
+ctxKey.set(true)
 function loadCode(code: string) {
-  setCookie('code', code, 365);
+
+  setCookie("code", code, 365);
 
   sandbox.width = canvas.width;
   sandbox.height = canvas.height;
 
   monaco.editor.setModelMarkers(editor.getModel(), 'shader', []);
 
+
   try {
     sandbox.load(code);
-  } catch (e) {
+    sandbox.setUniform("u_time", 0.0);
+  }
+  catch (e) {
     console.log(e);
   }
 }
 
+/*
 editor.addCommand(
   monaco.KeyCode.Escape,
   () => {
@@ -149,30 +160,66 @@ editor.addCommand(
     loadCode(code);
 
     return true;
+
   },
-  'condition'
+  'condition',
 );
+*/
 
-const times = [];
-let fps;
+editor.addAction({
+  // An unique identifier of the contributed action.
+  id: 'compile-and-run',
 
-function refreshLoop() {
-  window.requestAnimationFrame(() => {
-    const now = performance.now();
-    while (times.length > 0 && times[0] <= now - 1000) {
-      times.shift();
-    }
-    times.push(now);
-    fps = times.length;
-    refreshLoop();
-  });
-}
+  // A label of the action that will be presented to the user.
+  label: 'Compile and Run',
 
-refreshLoop();
-const fpshtml = document.getElementById('fps');
+  // An optional array of keybindings for the action.
+  keybindings: [
+    monaco.KeyCode.Escape,
+  ],
 
-setInterval(function() {
-  fpshtml.innerHTML = `${fps} fps`;
+  // A precondition for this action.
+  precondition: null,
+
+  // A rule to evaluate on top of the precondition in order to dispatch the keybindings.
+  keybindingContext: null,
+
+  contextMenuGroupId: 'navigation',
+
+  contextMenuOrder: 1.5,
+
+  // Method that will be executed when the action is triggered.
+  // @param editor The editor instance is passed in as a convinience
+  run: function (ed) {
+    const code = editor.getValue();
+
+    loadCode(code);
+    return null;
+  }
+});
+
+editor.addAction({
+  id: 'export url',
+  label: 'Get URL Source Code',
+  precondition: null,
+  keybindingContext: null,
+  contextMenuGroupId: 'navigation',
+  contextMenuOrder: 1.5,
+  run: function (ed) {
+    const code = document.URL.replace(/#.+/g, '') + "#" + window.btoa(editor.getValue());
+    window.prompt("Please copy the folowing URL", code);
+    return null;
+  }
+});
+
+
+
+
+
+const fpshtml = document.getElementById("fps");
+
+setInterval(function () {
+  fpshtml.innerText = `${Math.round(fps * 10) / 10} fps`;
 }, 1000);
 
 setTimeout(() => {
@@ -180,3 +227,4 @@ setTimeout(() => {
 
   loadCode(code);
 }, 0);
+
